@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Submarine Cable Viewer</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/georaster"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+
+  <style>
+    #map { height: 90vh; }
+
+    .leaflet-popup-content {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    #controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: white;
+      padding: 10px;
+      z-index: 1000;
+      border: 1px solid #ccc;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .legend-icon {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 5px;
+      vertical-align: middle;
+      border-radius: 2px;
+    }
+
+    .red-line { background-color: red; }
+    .orange-dot { background-color: orange; border-radius: 50%; }
+    .blue-dot { background-color: lightblue; border-radius: 50%;}
+    .purple-dot {background-color: purple; border-radius: 50%;}
+    .yellow-dash {
+      background: repeating-linear-gradient(
+        45deg,
+        yellow,
+        yellow 2px,
+        transparent 2px,
+        transparent 4px
+      );
+    }
+  </style>
+</head>
+<body>
+
+
+<h2>Submarine Cable Viewer</h2>
+
+<!-- ✅ Layer Toggle Panel -->
+<div id="controls">
+  <label><input type="checkbox" id="toggleCables" checked>
+    <span class="legend-icon red-line"></span> Submarine Cables
+  </label><br>
+
+  <label><input type="checkbox" id="toggleWarmCorals">
+    <span class="legend-icon orange-dot"></span> Warm-Water Coral Reefs
+  </label><br>
+
+  <label><input type="checkbox" id="toggleColdCorals">
+    <span class="legend-icon purple-dot"></span> Cold-Water Coral Reefs
+  </label><br>
+
+
+  <label><input type="checkbox" id="toggleMPA">
+    <span class="legend-icon blue-dot"></span> Marine Protected Areas
+  </label><br>
+
+
+  <label><input type="checkbox" id="toggleFaults">
+    <span class="legend-icon yellow-dash"></span> Earthquake Fault Lines
+  </label><br>
+</div>
+
+
+<div id="map"></div>
+
+<script>
+  const map = L.map('map', {
+    center: [10, 75],
+    zoom: 4,
+    worldCopyJump: false,
+    maxBounds: [[-90, -180], [90, 180]],
+    maxBoundsViscosity: 1.0
+  });
+
+  // Base map
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri, Maxar, Earthstar Geographics'
+  }).addTo(map);
+
+  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri'
+  }).addTo(map);
+
+  let cableLayer, coralLayerGroup = L.layerGroup(), mpaLayerGroup = L.layerGroup();
+  let faultLayer = null;
+
+  // 📡 Submarine Cables
+  fetch("/data/submarine_cables_fixed.geojson")
+    .then(res => res.json())
+    .then(data => {
+      cableLayer = L.geoJSON(data, {
+        style: { color: 'red', weight: 3 },
+        onEachFeature: function (feature, layer) {
+          let countryList = feature.properties.countries || [];
+          let countryHTML = "<ul>";
+          countryList.forEach(c => countryHTML += `<li>${c}</li>`);
+          countryHTML += "</ul>";
+          layer.bindPopup(
+            "<b>Name:</b> " + feature.properties.name + "<br>" +
+            "<b>Owner:</b> " + feature.properties.owners + "<br>" +
+            "<b>Countries:</b> " + countryHTML
+          );
+        }
+      });
+      if (document.getElementById("toggleCables").checked) {
+        cableLayer.addTo(map);
+      }
+    });
+
+  // Define separate layer groups
+let warmCoralLayerGroup = L.layerGroup();
+let coldCoralLayerGroup = L.layerGroup();
+
+// 🌡️ Warm Coral Toggle
+document.getElementById("toggleWarmCorals").addEventListener("change", function (e) {
+  if (e.target.checked) {
+    if (warmCoralLayerGroup.getLayers().length === 0) {
+      fetch("/data/warm_water_corals.geojson")
+        .then(res => res.json())
+        .then(data => {
+          const layer = L.geoJSON(data, {
+            pointToLayer: function (feature, latlng) {
+              return L.circleMarker(latlng, {
+                radius: 5,
+                fillColor: "orange",
+                color: "orange",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.6
+              });
+            },
+            onEachFeature: function (feature, layer) {
+              const props = feature.properties;
+              const popupContent = `
+                <div style="max-height: 150px; overflow-y: auto;">
+                  <b>Name:</b> ${props.NAME}<br>
+                  <b>Original Name:</b> ${props.ORIG_NAME}<br>
+                  <b>Family:</b> ${props.FAMILY}<br>
+                  <b>Genus:</b> ${props.GENUS}<br>
+                  <b>Species:</b> ${props.SPECIES}<br>
+                  <b>Data Type:</b> ${props.DATA_TYPE}<br>
+                  <b>Start Date:</b> ${props.START_DATE}<br>
+                  <b>End Date:</b> ${props.END_DATE}<br>
+                  <b>Location Type:</b> ${props.LOC_DEF}<br>
+                  <b>Survey Method:</b> ${props.SURVEY_MET}<br>
+                  <b>Verified:</b> ${props.VERIF}<br>
+                </div>`;
+              layer.bindPopup(popupContent);
+            }
+          });
+          warmCoralLayerGroup.addLayer(layer).addTo(map);
+        });
+    } else {
+      map.addLayer(warmCoralLayerGroup);
+    }
+  } else {
+    map.removeLayer(warmCoralLayerGroup);
+  }
+});
+
+// ❄️ Cold Coral Toggle
+document.getElementById("toggleColdCorals").addEventListener("change", function (e) {
+  if (e.target.checked) {
+    if (coldCoralLayerGroup.getLayers().length === 0) {
+      fetch("/data/new_cold_corals_ior.geojson")
+        .then(res => res.json())
+        .then(data => {
+          const layer = L.geoJSON(data, {
+            pointToLayer: function (feature, latlng) {
+              return L.circleMarker(latlng, {
+                radius: 5,
+                fillColor: "blueviolet",
+                color: "blueviolet",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.6
+              });
+            },
+            onEachFeature: function (feature, layer) {
+              const props = feature.properties;
+              const popupContent = `
+                <div style="max-height: 150px; overflow-y: auto;">
+                  <b>Name:</b> ${props.NAME}<br>
+                  <b>Original Name:</b> ${props.ORIG_NAME}<br>
+                  <b>Family:</b> ${props.FAMILY}<br>
+                  <b>Genus:</b> ${props.GENUS}<br>
+                  <b>Species:</b> ${props.SPECIES}<br>
+                  <b>Data Type:</b> ${props.DATA_TYPE}<br>
+                  <b>Start Date:</b> ${props.START_DATE}<br>
+                  <b>End Date:</b> ${props.END_DATE}<br>
+                  <b>Location Type:</b> ${props.LOC_DEF}<br>
+                  <b>Survey Method:</b> ${props.SURVEY_MET}<br>
+                  <b>Verified:</b> ${props.VERIF}<br>
+                </div>`;
+              layer.bindPopup(popupContent);
+            }
+          });
+          coldCoralLayerGroup.addLayer(layer).addTo(map);
+        });
+    } else {
+      map.addLayer(coldCoralLayerGroup);
+    }
+  } else {
+    map.removeLayer(coldCoralLayerGroup);
+  }
+});
+
+
+
+  // 🛡️ MPA toggle
+  document.getElementById("toggleMPA").addEventListener("change", function (e) {
+    if (e.target.checked) {
+      if (mpaLayerGroup.getLayers().length === 0) {
+        ["MPA0.geojson", "MPA11.geojson", "MPA22.geojson"].forEach(file => {
+          fetch(`/data/${file}`)
+            .then(res => res.json())
+            .then(data => {
+              const layer = L.geoJSON(data, {
+                style: { color: "blue", fillOpacity: 0.3 }
+              });
+              mpaLayerGroup.addLayer(layer);
+              mpaLayerGroup.addTo(map);
+            });
+        });
+      } else {
+        map.addLayer(mpaLayerGroup);
+      }
+    } else {
+      map.removeLayer(mpaLayerGroup);
+    }
+  });
+
+  // 🌋 Fault Lines toggle
+  document.getElementById("toggleFaults").addEventListener("change", function (e) {
+    if (e.target.checked) {
+      if (!faultLayer) {
+        fetch("/data/earthquake_active_faults.geojson")
+          .then(res => res.json())
+          .then(data => {
+            faultLayer = L.geoJSON(data, {
+              style: { color: "yellow", weight: 2, dashArray: '4' }
+            });
+            map.addLayer(faultLayer);
+          });
+      } else {
+        map.addLayer(faultLayer);
+      }
+    } else {
+      if (faultLayer) {
+        map.removeLayer(faultLayer);
+      }
+    }
+  });
+
+  // ✅ Toggle submarine cables
+  document.getElementById("toggleCables").addEventListener("change", function (e) {
+    if (cableLayer) {
+      if (e.target.checked) map.addLayer(cableLayer);
+      else map.removeLayer(cableLayer);
+    }
+  });
+
+  // ✅ Toggle seabed layers
+  document.getElementById("toggleSeabed").addEventListener("change", function (e) {
+    seabedLayers.forEach(layer => {
+      if (e.target.checked) map.addLayer(layer);
+      else map.removeLayer(layer);
+    });
+  });
+</script>
+
+</body>
+</html>
