@@ -6,17 +6,17 @@
 This is an interactive web-based GIS tool designed to **visualize, analyze, and plan submarine cable infrastructure** with environmental and geostrategic awareness in mind. Built as part of the Maritime Research Centre’s Underwater Domain Awareness (UDA) initiative, the tool overlays **critical undersea data layers**—such as existing submarine cables, marine protected areas, coral reefs, and tectonic fault lines—on a global base map using Leaflet.js.
 
 ## 🚀 Features
-🌍 High-resolution global satellite basemap
-🧭 Toggleable data layers:
+- 🌍 High-resolution global satellite basemap
+- 🧭 Toggleable data layers:
   - Submarine Cables
   - Warm-Water Coral Reefs
   - Cold-Water Coral Reefs (IOR region only)
   - Marine Protected Areas (MPAs)
   - Earthquake Fault Lines
-🔍 Interactive popups with metadata for each feature
-📦 Fast loading with optimized GeoJSON files
-🗺️ Restricted world bounds to prevent infinite panning
-📐 Modular and scalable design for future marine datasets
+- 🔍 Interactive popups with metadata for each feature
+- 📦 Fast loading with optimized GeoJSON files
+- 🗺️ Restricted world bounds to prevent infinite panning
+- 📐 Modular and scalable design for future marine datasets
 
 
 ## 🛠️ Tech Stack
