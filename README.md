@@ -101,5 +101,3 @@ This is an interactive web-based GIS tool designed to **visualize, analyze, and 
 - Internship Mentor – [Romit Kaware]
 
 - UDA Strategic Framework – Dr. (Cdr.) Arnab Das
-
-UDA Strategic Framework – Dr. (Cdr.) Arnab Das
