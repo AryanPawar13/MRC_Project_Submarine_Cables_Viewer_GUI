@@ -66,7 +66,7 @@ This is an interactive web-based GIS tool designed to **visualize, analyze, and 
 - Marine Protected Areas	          UNEP-WCMC and IUCN (2025), WDPA, [protectedplanet.net]
 - Earthquake Fault Lines	          GEM Global Active Faults Database – Styron & Pagani (2020)
 
-## Citations (APA Format)
+## Citations
 - UNEP-WCMC (2025). Ocean+ Habitats [On-line], [July 2025]. Available at: https://habitats.oceanplus.org
 
 - UNEP-WCMC and IUCN (2025). Protected Planet: The World Database on Protected Areas (WDPA). [July 2025]. Available at: https://www.protectedplanet.net
